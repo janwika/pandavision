@@ -1,0 +1,14 @@
+
+PLANE:
+  RANSAC_N: 3
+  RANSAC_THRESHOLD: 0.01
+  RANSAC_ITERATIONS: 1000
+  FLOOR_CUTOFF: -0.5
+
+IMAGE:
+  HEIGHT: 480
+  WIDTH: 640
+  FILE_PATH: '/home/jan/Desktop/pandavision/test_data'
+
+SEGMENT:
+  SAVE_MASK: False

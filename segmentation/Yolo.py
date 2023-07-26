@@ -11,10 +11,9 @@ class Yolo(Segment):
     
     def get_masks(self, img):
         if(self.model == None): raise Exception('Model not loaded')
-        results = self.model.predict(img, save=True)
+        results = self.model.predict(img, save=self.segmentConf['SAVE_MASK'])
         if(results[0].masks == None): return None
         
         objects = [self.model.names[int(c)] for c in results[0].boxes.cls]
-        
-        return {'objects': objects, 'masks': results[0].masks}
+        return {'objects': objects, 'masks': results[0].masks.xy}
             
