@@ -1,5 +1,6 @@
 import numpy as np
 from segmentation.Yolo import Yolo
+from segmentation.Detectron import Detectron2
 from image.Image import Image
 from image.Visualizer import Visualizer
 from sensor.File import File
@@ -22,17 +23,16 @@ print("Capture Data from Image or Intel RealSense?")
 terminal_menu = TerminalMenu(["Image", "Intel RealSense"])
 sensor = terminal_menu.show()
 
-print('Capturing Depth and  Color...')
-
 if(sensor == 0):
     num = int(input('Number of the Image: '))
     sensor = File(f"{path}/cuttlery/rgb/0000{num}.png",  f"{path}/cuttlery/depth/0000{num}.png")
 else:
+    print('Capturing Depth and Color...')
     sensor = RealSense(imageConf['WIDTH'], imageConf['HEIGHT']) 
     
 sensor.capture()
 
-print("Use YoloV8 or Detectron2 foor Segmentation?")
+print("Use YoloV8 or Detectron2 for Segmentation?")
 terminal_menu = TerminalMenu(["YoloV8", "Detectron2"])
 model = terminal_menu.show()
 
@@ -45,17 +45,13 @@ if(model == 0):
     print('Loading segmentation model...')
     segment = Yolo('stock', segmentConf)
 else:
-    pass
+    segment = Detectron2('stock', segmentConf)
 
 segment.load_model()
 
 print('Inferencing...')
 
-
-if(sensor == 0):
-    masks = segment.get_masks([f"{path}/cuttlery/rgb/0000{num}.png"])
-else:
-    masks = segment.get_masks(np.array(sensor.get_rgb()))
+masks = segment.get_masks(np.array(sensor.get_rgb()))
 
 print("What object should be used?")
 terminal_menu = TerminalMenu(masks['objects'])
