@@ -17,15 +17,14 @@ with open(config_path, "r") as f:
     segmentConf = config['SEGMENT']
 
 path = imageConf['FILE_PATH']
-num =  0
 
 print("Capture Data from Image or Intel RealSense?")
 terminal_menu = TerminalMenu(["Image", "Intel RealSense"])
 sensor = terminal_menu.show()
 
 if(sensor == 0):
-    num = int(input('Number of the Image: '))
-    sensor = File(f"{path}/cuttlery/rgb/0000{num}.png",  f"{path}/cuttlery/depth/0000{num}.png")
+    name = input('Name of the Image: ')
+    sensor = File(f"{path}/cuttlery/rgb/{name}",  f"{path}/cuttlery/depth/{name}")
 else:
     print('Capturing Depth and Color...')
     sensor = RealSense(imageConf['WIDTH'], imageConf['HEIGHT']) 

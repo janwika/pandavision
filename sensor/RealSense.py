@@ -16,6 +16,7 @@ class RealSense(Sensor):
     def capture(self):
         self.pipe.start(self.cfg)
         
+        # wait for camera to adjust
         for x in range(20):
             self.pipe.wait_for_frames()
             
