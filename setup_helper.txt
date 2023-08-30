@@ -5,3 +5,12 @@ conda env create -f environment.yml
 To start Matlab shareEngine and get the name use:
 matlab.engine.shareEngine
 matlab.engine.engineName
+
+Install Intel RealSense SDK
+https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md
+
+Install anaconda
+https://docs.anaconda.com/free/anaconda/install/linux/
+
+Install CUDA (should be handled through conda though)
+https://nvidia.github.io/cuda-python/install.html
