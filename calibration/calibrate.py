@@ -101,6 +101,7 @@ cam_coords = np.array(cam_coords)
 
 
 # TEST DATA; MUST DELETE
+"""
 np.random.seed(42)
 num_points = 800
 panda_coords = np.random.rand(num_points, 3)
@@ -109,6 +110,7 @@ rotation_matrix = np.array([[0.866, -0.5, 0],
                             [0, 0, 1]])
 translation_vector = np.array([1, 2, 3])
 cam_coords = np.dot(panda_coords, rotation_matrix.T) + translation_vector
+"""
 # TEST DATA END;
 
 
