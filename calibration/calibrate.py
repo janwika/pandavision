@@ -12,7 +12,7 @@ from tempfile import TemporaryFile
 path = f"{os.getcwd()}/calibration/captures"
 rgb = []
 depth = []
-debug = True
+debug = False
 
 file_list = os.listdir(f"{path}/rgb")
 
@@ -101,31 +101,28 @@ cam_coords = np.array(cam_coords)
 
 
 # TEST DATA; MUST DELETE
-"""
 np.random.seed(42)
-num_points = 8
+num_points = 800
 panda_coords = np.random.rand(num_points, 3)
 rotation_matrix = np.array([[0.866, -0.5, 0],
                             [0.5, 0.866, 0],
                             [0, 0, 1]])
 translation_vector = np.array([1, 2, 3])
 cam_coords = np.dot(panda_coords, rotation_matrix.T) + translation_vector
-"""
 # TEST DATA END;
 
 
 
 
 # estimate camera to panda translation/rotation matrix
-affine_matrix = cv2.estimateAffine3D(panda_coords, cam_coords)[1]
+retval, affine_matrix, _ = cv2.estimateAffine3D(panda_coords, cam_coords)
 
-
-print("Estimated Affine Matrix:")
+print(f"Estimation Successful: {retval != 0}")
+print("\nEstimated Affine Matrix:")
 print(affine_matrix)
 
 # Reproject camera coordinates back to panda coordinates using the transformation matrix
 reprojected_panda_coords = np.dot(cam_coords - affine_matrix[:3, 3], np.linalg.inv(affine_matrix[:3, :3]).T)
-
 
 # Calculate the error for each axis
 error = reprojected_panda_coords - panda_coords
