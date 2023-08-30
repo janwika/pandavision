@@ -5,6 +5,7 @@ from image.Image import Image
 from image.Visualizer import Visualizer
 from sensor.File import File
 from sensor.RealSense import RealSense
+from comm.Simulink import Simulink
 import yaml
 from simple_term_menu import TerminalMenu
 
@@ -15,8 +16,14 @@ with open(config_path, "r") as f:
     planeConf = config['PLANE']
     imageConf = config['IMAGE']
     segmentConf = config['SEGMENT']
+    simulinkConf = config['SIMULINK']
 
 path = imageConf['FILE_PATH']
+
+# get and prepare the transformation matrix obtained from Hand Eye Calibration
+calibration_matrix = np.genfromtxt('calibration_matrix.csv', delimiter=',')
+calibration_matrix = calibration_matrix.reshape(3,4)
+calibration_matrix = np.vstack((calibration_matrix, [0, 0, 0, 1]))
 
 print("Capture Data from Image or Intel RealSense?")
 terminal_menu = TerminalMenu(["Image", "Intel RealSense"])
@@ -24,7 +31,7 @@ sensor = terminal_menu.show()
 
 if(sensor == 0):
     name = input('Name of the Image: ')
-    sensor = File(f"{path}/cuttlery/rgb/{name}",  f"{path}/cuttlery/depth/{name}")
+    sensor = File(f"{path}/rgb/{name}",  f"{path}/depth/{name}")
 else:
     print('Capturing Depth and Color...')
     sensor = RealSense(imageConf['WIDTH'], imageConf['HEIGHT']) 
@@ -58,7 +65,7 @@ object = terminal_menu.show()
 
 print('Estimating position of objects...')
 
-img = Image(sensor, planeConf)
+img = Image(sensor, planeConf, calibration_matrix)
 vis =  Visualizer()
 
 img.estimate_plane()
@@ -76,3 +83,13 @@ elif(visualization == 2):
     vis.plot_pcd_inliers(img)
 elif(visualization == 3):
     vis.plot_pcd_projected_intersection(img)
+    
+print('Send to Panda?')
+terminal_menu = TerminalMenu(["Yes", "No"])
+send = terminal_menu.show()
+
+if(send == 0):
+    print('Sending...')
+    simulink = Simulink(simulinkConf['ENGINE_NAME'], simulinkConf['SIMULINK_SESSION_NAME'])
+    simulink.sendCenter(img, simulinkConf['CONTROL_ATTRIBUTE'])
+    print('Center Point successfully!')

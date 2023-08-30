@@ -4,11 +4,18 @@ PLANE:
   RANSAC_THRESHOLD: 0.01
   RANSAC_ITERATIONS: 1000
   FLOOR_CUTOFF: -0.5
+  CENTER_OFFSET: 0.1
 
 IMAGE:
   HEIGHT: 480
   WIDTH: 640
-  FILE_PATH: '/home/jan/Desktop/pandavision/test_data'
+  FILE_PATH: '/home/jan/Desktop/pandavision/finetuning_data/top_down'
 
 SEGMENT:
-  SAVE_MASK: False
+  SAVE_MASK: True
+
+SIMULINK:
+  ENGINE_NAME: MATLAB_1138722
+  SIMULINK_SESSION_NAME: test
+  CONTROL_ATTRIBUTE: A
+  READ_ATTRIBUTE: B

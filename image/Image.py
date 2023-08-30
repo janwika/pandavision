@@ -6,13 +6,16 @@ import matplotlib.pyplot as plt
 
 class Image:
     
-    def __init__(self, sensor, planeConf):
+    def __init__(self, sensor, planeConf, transformation_matrix):
         self.plane = None
         self.inliers = None
         self.intersection = None
         self.mask = None
         self.center = None
         self.planeConf = planeConf
+        self.bounding_box = None
+        self.transformation_matrix = transformation_matrix
+        print(self.transformation_matrix)
         
         #   read images
         self.color_raw = sensor.get_rgb()
@@ -31,6 +34,10 @@ class Image:
 
         #   flip transformation (revert  flip caused by camera)
         self.pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        
+        #   calibration transformation
+        self.pcd.transform(self.transformation_matrix)
+    
         
     def estimate_mask(self, mask):
         #   set all depth  pixels other than the mask's
@@ -56,7 +63,7 @@ class Image:
         )
         self.mask.paint_uniform_color([1.0, 0, 0])
         
-        #   pointcloud of projeccted mask voxels offset in depth by 100
+        #   pointcloud of projected mask voxels offset in depth by 100
         projectionMask = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbdProj,
             o3d.camera.PinholeCameraIntrinsic(
@@ -68,6 +75,10 @@ class Image:
         
         self.mask.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         projectionMask.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        
+        #   calibration transformation
+        self.mask.transform(self.transformation_matrix)
+        projectionMask.transform(self.transformation_matrix)
         
         intersections = []
         
@@ -84,6 +95,15 @@ class Image:
         self.intersection.paint_uniform_color([0, 0, 1.0])
         
         self.center = np.array([self.intersection.get_center()])
+        self.center[0][2] = self.center[0][2] + self.planeConf['CENTER_OFFSET']
+        
+        
+        
+        # !!!!!!!!!!!!!!!!! bounding_box.R = rotation matrix !!!!!!!!!!!!!!!!! #
+        
+        
+        self.intersection.points.extend(self.center)
+        self.bounding_box = self.intersection.get_oriented_bounding_box()
         
     def line_intersection_with_plane(self, p1, p2):
         # Parametric equation of the line
@@ -104,7 +124,7 @@ class Image:
         
     def estimate_plane(self):       
         points = np.array(self.pcd.points)
-        #   cuts off points beloow threshold to avoid detecting the floor
+        #   cuts off points below threshold to avoid detecting the floor
         floor = points[:, 2] < self.planeConf['FLOOR_CUTOFF']
         segmented_pcd = copy.deepcopy(self.pcd)
         segmented_pcd.points = o3d.utility.Vector3dVector(points[floor == 0])
@@ -134,3 +154,6 @@ class Image:
     
     def get_center(self):
         return self.center
+    
+    def get_bounding_box(self):
+        return self.bounding_box

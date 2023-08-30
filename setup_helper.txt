@@ -1,0 +1,7 @@
+To create/load conda environment use:
+conda env export | grep -v "^prefix: " > environment.yml
+conda env create -f environment.yml
+
+To start Matlab shareEngine and get the name use:
+matlab.engine.shareEngine
+matlab.engine.engineName
