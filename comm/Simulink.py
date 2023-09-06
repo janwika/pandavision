@@ -7,12 +7,12 @@ class Simulink:
         self.session = session    
         self.m = matlab.engine.connect_matlab(engine)            
             
-    def getAttribute(self, attr):
-        return self.m.get_param(f'{self.session}/{attr}', 'Value')
+    def getAttribute(self, attr, valName):
+        return self.m.get_param(f'{self.session}/{attr}', valName)
     
-    def setAttribute(self, attr, val):
+    def setAttribute(self, attr, valName, val):
         try:
-            self.m.set_param(f'{self.session}/{attr}', 'Value', val, nargout=200)
+            self.m.set_param(f'{self.session}/{attr}', valName, val, nargout=200)
         except:
             pass
         

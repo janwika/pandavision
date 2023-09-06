@@ -26,12 +26,13 @@ with open(f"{path}/calibration_points.json", 'r') as file:
     data = json.load(file)
 
 panda_coords = []
+
 for item in data:
     try:
-        coord_list = json.loads(item['coord'])  # Convert the string to a list
+        coord_list = json.loads(item)  # Convert the string to a list
         panda_coords.append(coord_list)
     except json.JSONDecodeError:
-        print(f"Invalid 'coord' value in entry with id: {item['id']}")
+        print(f"calibration_points.json is corrupted")
 
 # detect aruco corners and calculate center
 aruco_centers = []
