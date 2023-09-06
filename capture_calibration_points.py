@@ -9,6 +9,7 @@ import json
 from time import sleep
 
 config_path = './config.YAML'
+coord_path = './calibration/captures'
 
 #   load config
 with open(config_path, "r") as f:
@@ -16,7 +17,7 @@ with open(config_path, "r") as f:
     simulinkConf = config['SIMULINK']
 
 #   load panda coordinates
-with open(f"{path}/calibration_points.json", 'r') as file:
+with open(f"{coord_path}/calibration_points.json", 'r') as file:
     panda_coords = json.load(file)
 
 #   RealSense Intialization
@@ -49,7 +50,7 @@ for panda_coord in panda_coords:
     
     simulink.setAttribute(simulinkConf['ACTIVATE_ATTRIBUTE'], 'Value', '1')
     
-    sleep(1)
+    sleep(1) #  could possibly be shorter, doesn't really matter
     
     simulink.setAttribute(simulinkConf['ACTIVATE_ATTRIBUTE'], 'Value', '0')
     
