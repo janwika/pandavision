@@ -24,14 +24,19 @@ for filename in os.listdir(input_directory):
         # Only keep the first contour if it exists
         if len(contours) > 0:
             contour = contours[0]
-            
-            # Create a list to store contour points as a flat list
-            contour_points = []
-            
-            # Extract contour points and add them to the list
+
+            # Get the dimensions of the image
+            height, width = binary_mask_image.shape[:2]
+
+            # Create a list to store normalized contour points
+            normalized_contour_points = []
+
+            # Extract contour points, normalize them, and add them to the list
             for point in contour:
                 x, y = point[0]
-                contour_points.extend([x, y])
+                normalized_x = x / width
+                normalized_y = y / height
+                normalized_contour_points.extend([normalized_x, normalized_y])
 
             # Extract the part of the filename before the first underscore
             file_prefix = filename.split('_')[0]
@@ -42,13 +47,13 @@ for filename in os.listdir(input_directory):
             # Check if the text file already exists
             file_exists = os.path.exists(output_file_path)
 
-            # Append or create the text file and write the contour points to it
+            # Append or create the text file and write the normalized contour points to it
             with open(output_file_path, 'a') as output_file:
                 if not file_exists:
                     output_file.write('0 ')
-                output_file.write(' '.join(map(str, contour_points)) + '\n')
+                output_file.write(' '.join(map(str, normalized_contour_points)) + '\n')
 
             if file_exists:
                 print(f"Appended to {output_file_path}")
             else:
-                print(f"Contour points saved to {output_file_path}")
+                print(f"Normalized contour points saved to {output_file_path}")
