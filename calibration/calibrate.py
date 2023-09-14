@@ -12,9 +12,10 @@ from tempfile import TemporaryFile
 path = f"{os.getcwd()}/calibration/captures"
 rgb = []
 depth = []
-debug = False
+debug_2d = False
+debug_3d = True
 
-file_list = os.listdir(f"{path}/rgb")
+file_list = sorted(os.listdir(f"{path}/rgb"))
 
 for filename in file_list:
     rgb.append(o3d.io.read_image(os.path.join(f"{path}/rgb", filename)))
@@ -23,74 +24,108 @@ for filename in file_list:
 # parse panda coordinates from json
 
 with open(f"{path}/calibration_points.json", 'r') as file:
-    data = json.load(file)
-
-panda_coords = []
-
-for item in data:
-    try:
-        coord_list = json.loads(item)  # Convert the string to a list
-        panda_coords.append(coord_list)
-    except json.JSONDecodeError:
-        print(f"calibration_points.json is corrupted")
+    panda_coords = json.load(file)
+    
+with open(f"{path}/intrinsics.json", 'r') as file:
+    intrinsic_params = json.load(file)
+    
+intrinsic = o3d.camera.PinholeCameraIntrinsic(
+    intrinsic_params["width"],
+    intrinsic_params["height"],
+    intrinsic_params["fx"],
+    intrinsic_params["fy"],
+    intrinsic_params["ppx"],
+    intrinsic_params["ppy"]
+)
+    
+for i in range(len(panda_coords)):
+	val = panda_coords[i]
+	val = val.replace(";", ",")
+	panda_coords[i] = eval(val)
 
 # detect aruco corners and calculate center
-aruco_centers = []
+cam_coords = []
 for i in range(len(rgb)):
-    image = rgb[i]
-    rgb_np = np.asarray(image)
+    d = depth[i]
+    d_np = np.asarray(d)
+    r = rgb[i]
+    r_np = np.asarray(r)
     
-    gray = cv2.cvtColor(rgb_np, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(r_np, cv2.COLOR_BGR2GRAY)
     dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
     parameters =  cv2.aruco.DetectorParameters()
     detector = cv2.aruco.ArucoDetector(dictionary, parameters)
     
-    corners, ids, rejectedImgPoints = detector.detectMarkers(gray)
+    corners, _, _= detector.detectMarkers(gray)
+
+    corner_matrix = corners[0][0]
     
-    center = np.average(corners[0][0], axis=0)
-    aruco_centers.append(center)
-    
-    draw_corner = aruco.drawDetectedMarkers(gray, corners)
-    
-    if(debug):
-        plt.plot(center[0], center[1], marker='x', color="red")
+    # visual debugging 2d image
+    if(debug_2d):
+        draw_corner = aruco.drawDetectedMarkers(gray, corners)
+        plt.scatter(corner_matrix[0][0], corner_matrix[0][1], s=1, marker='.', color="red")
+        plt.scatter(corner_matrix[1][0], corner_matrix[1][1], s=1, marker='x', color="red")
+        plt.scatter(corner_matrix[2][0], corner_matrix[2][1], s=1, marker='x', color="red")
+        plt.scatter(corner_matrix[3][0], corner_matrix[3][1], s=1, marker='x', color="red")
         plt.imshow(draw_corner, cmap='gray', vmin=0, vmax=255)
-        plt.title(f"Image {i}, Center at {center}")
-        plt.get_current_fig_manager().full_screen_toggle()
         plt.show()
 
-cam_coords = []
-# use open3d pointcloud to calculate center coordinates
-for i in range(len(aruco_centers)):
-    cen = aruco_centers[i]
-    d = depth[i]
-    r = rgb[0]
+    corner_depth = np.full((d_np.shape[0], d_np.shape[1]), -1).astype(np.uint16)
 
-    d_np = np.asarray(d)
-    
-    z = d_np[int(cen[1])][int(cen[0])] # get depth with floored x,y of aruco center
-    
-    cen = np.append(cen, z)
-    
-    mat = np.full((d_np.shape[0], d_np.shape[1]), -1).astype(np.uint16)
+    for corner in corner_matrix:
+        z = d_np[round(corner[1])][round(corner[0])]
+        corner_depth[round(corner[1])][round(corner[0])] = d_np[round(corner[1])][round(corner[0])]
 
-    mat[int(cen[1])][int(cen[0])] = int(cen[2])
-    
     # Project center point into pointcloud
-    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(r, o3d.geometry.Image((mat).astype(np.uint16)))
+    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(r, o3d.geometry.Image((corner_depth).astype(np.uint16)))
         
     pc = o3d.geometry.PointCloud.create_from_rgbd_image(
         rgbd,
-        o3d.camera.PinholeCameraIntrinsic(
-            o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault
-        ),
+        intrinsic,
         project_valid_depth_only = True
     )
     
     # Rotation needed because of Pinhole Projection
     pc.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
     
-    cam_coords.append(pc.points[0])
+    corners_3d = np.asarray(pc.points)
+    
+    print(corners_3d)
+
+    # Calculate the midpoints of the diagonals
+    midpoint1 = (corners_3d[0] + corners_3d[2]) / 2
+    midpoint2 = (corners_3d[1] + corners_3d[3]) / 2
+
+    # Calculate the center by averaging the two midpoints
+    center = (midpoint1 + midpoint2) / 2
+    
+    if(len(pc.points) == 0):
+        print("Could not find 3d point for", i)
+        del panda_coords[i]
+        continue
+    
+    cam_coords.append(center)
+
+    # visual debugging 3d pointcloud
+    if(debug_3d):
+        center_and_corners = np.vstack((corners_3d, np.array(center)))
+        pc.points = o3d.utility.Vector3dVector(center_and_corners)
+
+        pc.paint_uniform_color([1.0, 0, 0])
+
+        # Project center point into pointcloud
+        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(r, d)
+            
+        pc_e = o3d.geometry.PointCloud.create_from_rgbd_image(
+            rgbd,
+            intrinsic
+        )
+        pc_e.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        
+        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1, origin=[0, 0, 0])
+
+        o3d.visualization.draw_geometries([pc_e, pc, coordinate_frame])
+        
     
     
 #   at this point panda_coords holds the robot coordinates and cam_coords holds the center coords of the aruco code
@@ -100,27 +135,15 @@ panda_coords = np.array(panda_coords)
 cam_coords = np.array(cam_coords)
 
 
-
-# TEST DATA; MUST DELETE
-"""
-np.random.seed(42)
-num_points = 800
-panda_coords = np.random.rand(num_points, 3)
-rotation_matrix = np.array([[0.866, -0.5, 0],
-                            [0.5, 0.866, 0],
-                            [0, 0, 1]])
-translation_vector = np.array([1, 2, 3])
-cam_coords = np.dot(panda_coords, rotation_matrix.T) + translation_vector
-"""
-# TEST DATA END;
-
+for i in range(len(panda_coords)):
+	print(f"panda: {panda_coords[i]}; cam: {cam_coords[i]}")
 
 
 
 # estimate camera to panda translation/rotation matrix
 retval, affine_matrix, _ = cv2.estimateAffine3D(panda_coords, cam_coords)
 
-print(f"Estimation Successful: {retval != 0}")
+print(f"Estimation Successful: {retval}")
 print("\nEstimated Affine Matrix:")
 print(affine_matrix)
 
