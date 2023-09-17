@@ -9,11 +9,13 @@ from tempfile import TemporaryFile
 
 # read depth, rgb from Images
 
+skip = [3, 11, 29, 30, 34, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48]
+
 path = f"{os.getcwd()}/calibration/captures"
 rgb = []
 depth = []
 debug_2d = False
-debug_3d = True
+debug_3d = False
 
 file_list = sorted(os.listdir(f"{path}/rgb"))
 
@@ -41,11 +43,23 @@ intrinsic = o3d.camera.PinholeCameraIntrinsic(
 for i in range(len(panda_coords)):
 	val = panda_coords[i]
 	val = val.replace(";", ",")
-	panda_coords[i] = eval(val)
-
+	coor = eval(val)
+	coor[2] = coor[2] - 0.1 # improve this value! (offset to aruco center)
+	panda_coords[i] = coor
+	
+print(panda_coords)
+deleted = 0
 # detect aruco corners and calculate center
 cam_coords = []
 for i in range(len(rgb)):
+
+    if(i+1 in skip):
+        print("Skipping iteration", i)
+        del panda_coords[i - deleted]
+        deleted += 1
+        continue
+    print(i)
+
     d = depth[i]
     d_np = np.asarray(d)
     r = rgb[i]
@@ -141,7 +155,7 @@ for i in range(len(panda_coords)):
 
 
 # estimate camera to panda translation/rotation matrix
-retval, affine_matrix, _ = cv2.estimateAffine3D(panda_coords, cam_coords)
+retval, affine_matrix, _ = cv2.estimateAffine3D(cam_coords, panda_coords)
 
 print(f"Estimation Successful: {retval}")
 print("\nEstimated Affine Matrix:")
@@ -152,9 +166,28 @@ reprojected_panda_coords = np.dot(cam_coords - affine_matrix[:3, 3], np.linalg.i
 
 # Calculate the error for each axis
 error = reprojected_panda_coords - panda_coords
+
+for i in range(len(panda_coords)):
+	print(f"{i}: panda: {panda_coords[i]}; cam coords: {cam_coords[i]}; error: {error[i]}")
     
 mean_error = np.mean(error, axis=0)
 median_error = np.median(error, axis=0)
+
+
+calibration_matrix = affine_matrix.reshape(3,4)
+calibration_matrix = np.vstack((calibration_matrix, [0, 0, 0, 1]))
+print(calibration_matrix)
+
+rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(rgb[0], depth[0])
+pc_e = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, intrinsic)
+pc_e.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+pc_e.transform(calibration_matrix)
+
+coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1, origin=[0, 0, 0])
+
+o3d.visualization.draw_geometries([pc_e, pc, coordinate_frame])
+
+
 
 print("\nReprojection Result:")
 print("Mean Error:", mean_error)

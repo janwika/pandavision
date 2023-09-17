@@ -125,9 +125,15 @@ class Image:
     def estimate_plane(self):       
         points = np.array(self.pcd.points)
         #   cuts off points below threshold to avoid detecting the floor
-        floor = points[:, 2] < self.planeConf['FLOOR_CUTOFF']
+        print(np.average(points))
+        y_floor = points[:, 1] > self.planeConf['Y_FLOOR']
+        
+        z_ceil = points[:, 2] < self.planeConf['Z_CEIL']
+        z_floor = points[:, 2] > self.planeConf['Z_FLOOR']
+        
+        cutoff = y_floor & z_ceil & z_floor
         segmented_pcd = copy.deepcopy(self.pcd)
-        segmented_pcd.points = o3d.utility.Vector3dVector(points[floor == 0])
+        segmented_pcd.points = o3d.utility.Vector3dVector(points[cutoff])
         
         plane_model, inliers = segmented_pcd.segment_plane(distance_threshold=self.planeConf['RANSAC_THRESHOLD'],
                                          ransac_n=self.planeConf['RANSAC_N'],

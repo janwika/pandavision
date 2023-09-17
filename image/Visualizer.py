@@ -5,13 +5,8 @@ import matplotlib.pyplot as plt
 class Visualizer:
     
     def plot_pcd(self, image):
-        vis = o3d.visualization.Visualizer()
-        vis.create_window()
-        opt = vis.get_render_option()
-        opt.show_coordinate_frame = True
-        vis.add_geometry(image.get_pcd())
-        o3d.visualization.ViewControl.set_zoom(vis.get_view_control(), 0.8)
-        vis.run()
+        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([image.get_pcd(), coordinate_frame])
         
     def plot_rgbd(self,  image):
         plt.subplot(1, 2, 1)
@@ -25,21 +20,10 @@ class Visualizer:
     def plot_pcd_inliers(self, image):
         inliers = image.get_inliers()
         if(inliers == None): raise Exception('No Plane was estimated.')
-        vis = o3d.visualization.Visualizer()
-        vis.create_window()
-        opt = vis.get_render_option()
-        opt.show_coordinate_frame = True
-        vis.add_geometry(image.get_pcd())
-        vis.add_geometry(inliers)
-        vis.run()
+        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([image.get_pcd(), inliers, coordinate_frame])
         
     def plot_pcd_projected_intersection(self,  image):
         intersection = image.get_intersection()
-        vis = o3d.visualization.Visualizer()
-        vis.create_window()
-        opt = vis.get_render_option()
-        opt.show_coordinate_frame = True
-        vis.add_geometry(image.get_pcd())
-        vis.add_geometry(intersection)
-        vis.add_geometry(image.get_bounding_box())        
-        vis.run()
+        coordinate_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5, origin=[0, 0, 0])
+        o3d.visualization.draw_geometries([image.get_pcd(), intersection, image.get_bounding_box(), coordinate_frame])
