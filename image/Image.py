@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 import copy
 import matplotlib.pyplot as plt
+import json
 
 class Image:
     
@@ -15,7 +16,18 @@ class Image:
         self.planeConf = planeConf
         self.bounding_box = None
         self.transformation_matrix = transformation_matrix
-        print(self.transformation_matrix)
+        
+        with open("./calibration/captures/intrinsics.json", 'r') as file:
+            intrinsic_params = json.load(file)
+            
+        self.intrinsic = o3d.camera.PinholeCameraIntrinsic(
+            intrinsic_params["width"],
+            intrinsic_params["height"],
+            intrinsic_params["fx"],
+            intrinsic_params["fy"],
+            intrinsic_params["ppx"],
+            intrinsic_params["ppy"]
+        )
         
         #   read images
         self.color_raw = sensor.get_rgb()
@@ -27,9 +39,7 @@ class Image:
         #   create pointcloud
         self.pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
             self.rgbd,
-            o3d.camera.PinholeCameraIntrinsic(
-                o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault
-            )
+            self.intrinsic
         )
 
         #   flip transformation (revert  flip caused by camera)
@@ -56,9 +66,7 @@ class Image:
         #   pointcloud of projeccted mask voxels
         self.mask = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd,
-            o3d.camera.PinholeCameraIntrinsic(
-                o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault
-            ),
+            self.intrinsic,
             project_valid_depth_only = True
         )
         self.mask.paint_uniform_color([1.0, 0, 0])
@@ -66,9 +74,7 @@ class Image:
         #   pointcloud of projected mask voxels offset in depth by 100
         projectionMask = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbdProj,
-            o3d.camera.PinholeCameraIntrinsic(
-                o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault
-            ),
+            self.intrinsic,
             project_valid_depth_only = True
         )
         projectionMask.paint_uniform_color([0, 0, 1.0])
@@ -126,14 +132,14 @@ class Image:
         points = np.array(self.pcd.points)
         #   cuts off points below threshold to avoid detecting the floor
         print(np.average(points))
-        y_floor = points[:, 1] > self.planeConf['Y_FLOOR']
+        #y_floor = points[:, 1] > self.planeConf['Y_FLOOR']
         
-        z_ceil = points[:, 2] < self.planeConf['Z_CEIL']
-        z_floor = points[:, 2] > self.planeConf['Z_FLOOR']
+        #z_ceil = points[:, 2] < self.planeConf['Z_CEIL']
+        #z_floor = points[:, 2] > self.planeConf['Z_FLOOR']
         
-        cutoff = y_floor & z_ceil & z_floor
+        #cutoff = y_floor & z_ceil & z_floor
         segmented_pcd = copy.deepcopy(self.pcd)
-        segmented_pcd.points = o3d.utility.Vector3dVector(points[cutoff])
+        #segmented_pcd.points = o3d.utility.Vector3dVector(points[cutoff])
         
         plane_model, inliers = segmented_pcd.segment_plane(distance_threshold=self.planeConf['RANSAC_THRESHOLD'],
                                          ransac_n=self.planeConf['RANSAC_N'],
