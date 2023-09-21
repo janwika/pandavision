@@ -9,7 +9,7 @@ PLANE:
 IMAGE:
   HEIGHT: 480
   WIDTH: 640
-  FILE_PATH: '/home/jan/Desktop/pandavision/calibration/captures'
+  FILE_PATH: '/home/jan/Desktop/pandavision/finetuning_data/top_down'
 
 SEGMENT:
   SAVE_MASK: True

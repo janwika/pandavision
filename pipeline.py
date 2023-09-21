@@ -47,9 +47,12 @@ model = terminal_menu.show()
 if(model == 0):
     print("Use Stock YoloV8 or Finetuned?")
     terminal_menu = TerminalMenu(["Stock", "Finetuned"])
-    model = terminal_menu.show()
+    model_type = terminal_menu.show()
     print('Loading segmentation model...')
-    segment = Yolo('stock', segmentConf)
+    if(model_type == 1):
+        segment = Yolo('finetuned', segmentConf)
+    else:
+        segment = Yolo('stock', segmentConf)
 else:
     segment = Detectron2('stock', segmentConf)
 
@@ -58,6 +61,10 @@ segment.load_model()
 print('Inferencing...')
 
 masks = segment.get_masks(np.array(sensor.get_rgb()))
+
+if(masks == None):
+    print('No objects detected. Exiting..')
+    exit()
 
 print("What object should be used?")
 terminal_menu = TerminalMenu(masks['objects'])

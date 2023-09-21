@@ -1,5 +1,6 @@
 /runs
 /yolov8n-seg.pt
 /yolov8x-seg.pt
+/finetuned_pre_own_labels.pt
 /detectron2
 /calibration_matrix.csv
