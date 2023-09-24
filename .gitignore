@@ -2,5 +2,9 @@
 /yolov8n-seg.pt
 /yolov8x-seg.pt
 /finetuned_pre_own_labels.pt
+/finetuned_post_own_labels.pt
 /detectron2
 /calibration_matrix.csv
+/finetuning_data/both_views
+/finetuning_data/side_view
+/finetuning_data/top_down

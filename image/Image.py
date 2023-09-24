@@ -111,6 +111,11 @@ class Image:
         self.intersection.points.extend(self.center)
         self.bounding_box = self.intersection.get_oriented_bounding_box()
         
+        print("R")
+        print(self.bounding_box.R)
+        print("get R")
+        print(self.bounding_box.get_rotation_matrix_from_xyz(self.intersection.get_center()))
+        
     def line_intersection_with_plane(self, p1, p2):
         # Parametric equation of the line
         def line_eq(t):
