@@ -17,9 +17,9 @@ class Simulink:
         except:
             pass
             
-    def getRealTimeValue(self, attr, port):
-    	return self.m.eval(f"rto.InputPort({port}).Data")
-          
+    def getRealTimeValue(self, port):
+        return self.m.eval(f"rto.InputPort({port}).Data")
+
     def sendCenter(self, image, attr):
         center = image.get_center()
         self.setAttribute(attr, f"{center}")

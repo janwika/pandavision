@@ -85,15 +85,13 @@ for panda_coord in panda_coords:
     
     simulink.setAttribute(simulinkConf['ACTIVATE_ATTRIBUTE'], 'Value', '1')
     
-    sleep(1) #  could possibly be shorter, doesn't really matter
-    
-    simulink.setAttribute(simulinkConf['ACTIVATE_ATTRIBUTE'], 'Value', '0')
-    
     input('Arrived at Goal?') # needed since movement takes unknown amount of time, could be automated with upper boundary
     #   figure out name of files
     items = os.listdir(f'{path}/rgb')
     files = [item for item in items if os.path.isfile(os.path.join(f'{path}/rgb', item))]
     run = len(files) + 1
+    
+    simulink.setAttribute(simulinkConf['ACTIVATE_ATTRIBUTE'], 'Value', '0')
     
     #   capture image from Realsense Camera
     
@@ -112,9 +110,11 @@ for panda_coord in panda_coords:
     
     rgb = Image.fromarray(color_image)
     depth = Image.fromarray(depth_image)
+    
+    padded_run = str(run).zfill(3)
 
-    rgb.save(f'{path}/rgb/{name}{run}.png')
-    depth.save(f'{path}/depth/{name}{run}.png')
+    rgb.save(f'{path}/rgb/{name}{padded_run}.png')
+    depth.save(f'{path}/depth/{name}{padded_run}.png')
 
 pipeline.stop()
 save_intrinsic_as_json(f"{path}/intrinsics.json", color_frame)
