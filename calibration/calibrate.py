@@ -9,7 +9,7 @@ from tempfile import TemporaryFile
 
 # read depth, rgb from Images
 
-skip = [3, 11, 29, 30, 34, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48]
+skip = [3, 11, 29, 30, 34, 37, 38, 39, 41, 42, 43, 46, 47, 48]
 
 path = f"{os.getcwd()}/calibration/captures"
 rgb = []

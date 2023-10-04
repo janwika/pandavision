@@ -1,5 +1,6 @@
 import open3d as o3d
 import numpy as np
+import numpy.linalg as la
 import itertools
 import copy
 import matplotlib.pyplot as plt
@@ -47,8 +48,71 @@ class Image:
         
         #   calibration transformation
         self.pcd.transform(self.transformation_matrix)
-    
         
+    # maybe need to credit https://gist.github.com/anmolkabra/b95b8e7fb7a6ff12ba5d120b6d9d1937
+        
+    def gram_schmidt(self, U, eps=1e-15):
+        n = len(U[0])
+        # numpy can readily reference rows using indices, but referencing full rows is a little
+        # dirty. So, work with transpose(U)
+        V = U.T
+        for i in range(n):
+            prev_basis = V[0:i]     # orthonormal basis before V[i]
+            coeff_vec = np.dot(prev_basis, V[i].T)  # each entry is np.dot(V[j], V[i]) for all j < i
+            # subtract projections of V[i] onto already determined basis V[0:i]
+            V[i] -= np.dot(coeff_vec, prev_basis).T
+            if la.norm(V[i]) < eps:
+                V[i][V[i] < eps] = 0.   # set the small entries to 0
+            else:
+                V[i] /= la.norm(V[i])
+        return V.T
+    
+    def find_z_angle(self, rot_mat):
+        closest_index = None
+        closest_difference = 2
+
+        for i, num in enumerate(rot_mat[2]):
+            absolute_difference = abs(abs(num) - 1)
+            if absolute_difference < closest_difference:
+                closest_difference = absolute_difference
+                closest_index = i
+                
+        angles = [0] * 4
+        angle_index = 0
+                
+        for i, row in enumerate(rot_mat):
+            if i == 2: continue
+            for i, column in enumerate(rot_mat[i]):
+                if i == closest_index: continue
+                angles[angle_index] = column
+                angle_index += 1
+        
+        min_diff = float('inf')
+        cos_indexes = [0] * 2
+        sin_indexes = [0] * 2
+
+        for i in range(len(angles)):
+            for j in range(i + 1, len(angles)):
+                absolute_diff = angles[i] - angles[j]
+                if absolute_diff < min_diff:
+                    min_diff = absolute_diff
+                    cos_indexes[0] = i
+                    cos_indexes[1] = j
+                    
+        arccos1 = np.arccos(angles[int(cos_indexes[0])])
+        arccos2 = np.arccos(angles[int(cos_indexes[1])])
+        
+        sin_i = 0
+        for i, index in enumerate(angles):
+            if i in cos_indexes: continue
+            sin_indexes[sin_i] = angles[i]
+            sin_i += 1
+        
+        arcsin1 = np.arccos(abs(angles[int(sin_indexes[0])]))
+        arcsin2 = np.arccos(abs(angles[int(sin_indexes[1])]))
+        
+        return np.average((arccos1, arccos2, arcsin1, arcsin2))
+
     def estimate_mask(self, mask):
         #   set all depth  pixels other than the mask's
         depth = np.asarray(self.depth_raw)
@@ -101,20 +165,16 @@ class Image:
         self.intersection.paint_uniform_color([0, 0, 1.0])
         
         self.center = np.array([self.intersection.get_center()])
-        self.center[0][2] = self.center[0][2] + self.planeConf['CENTER_OFFSET']
-        
-        
-        
-        # !!!!!!!!!!!!!!!!! bounding_box.R = rotation matrix !!!!!!!!!!!!!!!!! #
-        
+        self.center[0][2] = self.center[0][2] + self.planeConf['CENTER_OFFSET']        
         
         self.intersection.points.extend(self.center)
         self.bounding_box = self.intersection.get_oriented_bounding_box()
         
-        print("R")
-        print(self.bounding_box.R)
-        print("get R")
-        print(self.bounding_box.get_rotation_matrix_from_xyz(self.intersection.get_center()))
+        rot_mat = self.gram_schmidt(np.array(self.bounding_box.R))
+        
+        angle = self.find_z_angle(rot_mat)
+        
+        print("z-angle (rad):", angle)
         
     def line_intersection_with_plane(self, p1, p2):
         # Parametric equation of the line
@@ -136,15 +196,14 @@ class Image:
     def estimate_plane(self):       
         points = np.array(self.pcd.points)
         #   cuts off points below threshold to avoid detecting the floor
-        print(np.average(points))
-        #y_floor = points[:, 1] > self.planeConf['Y_FLOOR']
+        y_floor = points[:, 1] > self.planeConf['Y_FLOOR']
         
-        #z_ceil = points[:, 2] < self.planeConf['Z_CEIL']
-        #z_floor = points[:, 2] > self.planeConf['Z_FLOOR']
+        z_ceil = points[:, 2] < self.planeConf['Z_CEIL']
+        z_floor = points[:, 2] > self.planeConf['Z_FLOOR']
         
-        #cutoff = y_floor & z_ceil & z_floor
+        cutoff = y_floor & z_ceil & z_floor
         segmented_pcd = copy.deepcopy(self.pcd)
-        #segmented_pcd.points = o3d.utility.Vector3dVector(points[cutoff])
+        segmented_pcd.points = o3d.utility.Vector3dVector(points[cutoff])
         
         plane_model, inliers = segmented_pcd.segment_plane(distance_threshold=self.planeConf['RANSAC_THRESHOLD'],
                                          ransac_n=self.planeConf['RANSAC_N'],
