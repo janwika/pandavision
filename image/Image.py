@@ -71,8 +71,7 @@ class Image:
     def find_z_angle(self, rot_mat):
         print(rot_mat)
 
-        alpha = None
-        one_col_index = np.argmin(abs(abs(rot_mat[2]) - 1))
+        one_col_index = np.argmin(abs(abs(rot_mat[2]) - 1)) #   column with |last element| nearest to 1
                 
         rot_mat = np.delete(rot_mat, one_col_index,1)
         rot_mat = np.delete(rot_mat, 2,0) # only needed for print
@@ -82,12 +81,10 @@ class Image:
         case1 = abs(rot_mat[0][0] - rot_mat[1][1])
         case2 = abs(rot_mat[0][0] + rot_mat[1][1])
 
-        if(case1 < case2):
-            alpha = np.arcsin(rot_mat[1][0])
-            print(f"sin: {rot_mat[1][0]}; asin {alpha}")
-        else:
-            alpha = np.arcsin(rot_mat[1][1])
-            print(f"sin: {rot_mat[1][1]}; asin {alpha}")
+        sin = rot_mat[1][0] if case1 < case2 else rot_mat[1][1]
+        alpha = np.arcsin(sin)
+        
+        print(f"sin: {sin}; asin {alpha}")
             
         return alpha
 
