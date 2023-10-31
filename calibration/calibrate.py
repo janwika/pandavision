@@ -15,7 +15,7 @@ path = f"{os.getcwd()}/calibration/captures"
 rgb = []
 depth = []
 debug_2d = False
-debug_3d = False
+debug_3d = True
 
 file_list = sorted(os.listdir(f"{path}/rgb"))
 
