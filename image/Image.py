@@ -69,14 +69,10 @@ class Image:
         return V.T
     
     def find_z_angle(self, rot_mat):
-        print(rot_mat)
-
         one_col_index = np.argmin(abs(abs(rot_mat[2]) - 1)) #   column with |last element| nearest to 1
                 
         rot_mat = np.delete(rot_mat, one_col_index,1)
         rot_mat = np.delete(rot_mat, 2,0) # only needed for print
-
-        print(rot_mat)
 
         case1 = abs(rot_mat[0][0] - rot_mat[1][1])
         case2 = abs(rot_mat[0][0] + rot_mat[1][1])
