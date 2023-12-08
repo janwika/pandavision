@@ -50,8 +50,48 @@ class Image:
         #   calibration transformation
         self.pcd.transform(self.transformation_matrix)
         
-    # maybe need to credit https://gist.github.com/anmolkabra/b95b8e7fb7a6ff12ba5d120b6d9d1937
+    def align_bbox(self, bbox):
+        # Get all 8 points of the bounding box
+        points = bbox.get_box_points()
+
+        # Split the points into two sets based on their z-values
+        lower_points = [point for point in points if point[2] <= np.median([point[2] for point in points])]
+        upper_points = [point for point in points if point[2] > np.median([point[2] for point in points])]
         
+        if(len(lower_points) != 4 or len(upper_points) != 4):
+            raise Exception("bounding box couldn't be aligned")
+
+        # Among the lower points, find the one closest to the world origin
+        origin = min(lower_points, key=lambda point: np.linalg.norm(point))
+
+        # Calculate the distances between the origin and all other lower points
+        distances = [np.linalg.norm(point - origin) for point in lower_points]
+
+        # Find the two smallest distances (excluding zero)
+        min_distances = sorted(set(distances))[1:3]
+
+        # Find the points that are connected to the origin by the edges of the bounding box
+        connected_points = [point for point, distance in zip(lower_points, distances) if distance in min_distances]
+
+        # Calculate the lengths of the sides connected to the origin
+        side_lengths = [np.linalg.norm(point - origin) for point in connected_points]
+
+        # Use the point connected by the shorter side to define the x-axis, and the point connected by the longer side to define the y-axis
+        x_axis = connected_points[side_lengths.index(min(side_lengths))] - origin
+        y_axis = connected_points[side_lengths.index(max(side_lengths))] - origin
+
+        # Calculate the z-axis as the cross product of the x-axis and y-axis
+        z_axis = np.cross(x_axis, y_axis)
+
+        # Check if the z-axis is looking down
+        if np.dot(z_axis, [0, 0, 1]) < 0:
+            z_axis = -z_axis
+
+        # Create the new bounding box
+        return BoundingBox(origin, x_axis, y_axis, z_axis)
+
+
+    # maybe need to credit https://gist.github.com/anmolkabra/b95b8e7fb7a6ff12ba5d120b6d9d1937
     def gram_schmidt(self, U, eps=1e-15):
         n = len(U[0])
         # numpy can readily reference rows using indices, but referencing full rows is a little
@@ -139,11 +179,9 @@ class Image:
         self.center[0][2] = self.center[0][2] + self.planeConf['CENTER_OFFSET']        
         
         self.intersection.points.extend(self.center)
-        self.bounding_box = self.intersection.get_oriented_bounding_box()
+        self.bounding_box = align_bbox(self.intersection.get_oriented_bounding_box())
         
         rot_mat = self.gram_schmidt(np.array(self.bounding_box.R))
-        
-        self.angle = self.find_z_angle(rot_mat)
         
     def line_intersection_with_plane(self, p1, p2):
         # Parametric equation of the line
