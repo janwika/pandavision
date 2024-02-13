@@ -77,7 +77,7 @@ simulink.setAttribute(simulinkConf['ACTIVATE_ATTRIBUTE'], 'Value', '0')
     
 for panda_coord in panda_coords:
     #   set coordinates and start movement
-    simulink.setAttribute(simulinkConf['COORDINATE_ATTRIBUTE'], 'Value', panda_coord)
+    simulink.setAttribute(simulinkConf['COORDINATE_HOME_ATTRIBUTE'], 'Value', panda_coord)
     
     sleep(0.1) #    check if this is really needed
     

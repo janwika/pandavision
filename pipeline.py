@@ -98,5 +98,4 @@ send = terminal_menu.show()
 if(send == 0):
     print('Sending...')
     simulink = Simulink(simulinkConf['ENGINE_NAME'], simulinkConf['SIMULINK_SESSION_NAME'])
-    simulink.sendCenter(img, simulinkConf['CONTROL_ATTRIBUTE'])
-    print('Center Point successfully!')
+    simulink.sendCenter(img, simulinkConf['ACTIVATE_ATTRIBUTE'], simulinkConf['COORDINATE_ATTRIBUTE'], simulinkConf['ANGLE_ATTRIBUTE'])

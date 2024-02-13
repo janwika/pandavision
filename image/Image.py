@@ -14,6 +14,7 @@ class Image:
         self.intersection = None
         self.mask = None
         self.center = None
+        self.angle = None
         self.planeConf = planeConf
         self.bounding_box = None
         self.transformation_matrix = transformation_matrix
@@ -68,50 +69,22 @@ class Image:
         return V.T
     
     def find_z_angle(self, rot_mat):
-        closest_index = None
-        closest_difference = 2
-
-        for i, num in enumerate(rot_mat[2]):
-            absolute_difference = abs(abs(num) - 1)
-            if absolute_difference < closest_difference:
-                closest_difference = absolute_difference
-                closest_index = i
+        one_col_index = np.argmin(abs(abs(rot_mat[2]) - 1)) #   column with |last element| nearest to 1
                 
-        angles = [0] * 4
-        angle_index = 0
-                
-        for i, row in enumerate(rot_mat):
-            if i == 2: continue
-            for i, column in enumerate(rot_mat[i]):
-                if i == closest_index: continue
-                angles[angle_index] = column
-                angle_index += 1
+        rot_mat = np.delete(rot_mat, one_col_index,1)
+        rot_mat = np.delete(rot_mat, 2,0) # only needed for print
         
-        min_diff = float('inf')
-        cos_indexes = [0] * 2
-        sin_indexes = [0] * 2
+        print(rot_mat)
 
-        for i in range(len(angles)):
-            for j in range(i + 1, len(angles)):
-                absolute_diff = angles[i] - angles[j]
-                if absolute_diff < min_diff:
-                    min_diff = absolute_diff
-                    cos_indexes[0] = i
-                    cos_indexes[1] = j
-                    
-        arccos1 = np.arccos(angles[int(cos_indexes[0])])
-        arccos2 = np.arccos(angles[int(cos_indexes[1])])
-        
-        sin_i = 0
-        for i, index in enumerate(angles):
-            if i in cos_indexes: continue
-            sin_indexes[sin_i] = angles[i]
-            sin_i += 1
-        
-        arcsin1 = np.arccos(abs(angles[int(sin_indexes[0])]))
-        arcsin2 = np.arccos(abs(angles[int(sin_indexes[1])]))
-        
-        return np.average((arccos1, arccos2, arcsin1, arcsin2))
+        case1 = abs(rot_mat[0][0] - rot_mat[1][1])
+        case2 = abs(rot_mat[0][0] + rot_mat[1][1])
+
+        sin = rot_mat[1][0] if case1 < case2 else rot_mat[1][1]
+        alpha = -np.arcsin(sin) if case1 < case2 else np.arcsin(sin)
+            
+        print(f"sin: {sin}; asin {alpha}")
+            
+        return alpha
 
     def estimate_mask(self, mask):
         #   set all depth  pixels other than the mask's
@@ -172,9 +145,7 @@ class Image:
         
         rot_mat = self.gram_schmidt(np.array(self.bounding_box.R))
         
-        angle = self.find_z_angle(rot_mat)
-        
-        print("z-angle (rad):", angle)
+        self.angle = self.find_z_angle(rot_mat)
         
     def line_intersection_with_plane(self, p1, p2):
         # Parametric equation of the line
@@ -230,6 +201,12 @@ class Image:
     
     def get_center(self):
         return self.center
-    
+        
+    def convert_to_simulink_notation(self, coordinate):
+        return f"[{round(coordinate[0][0], 3)};{round(coordinate[0][1], 3)};{round(coordinate[0][2], 3)}]"
+ 
     def get_bounding_box(self):
         return self.bounding_box
+    
+    def get_angle(self):
+    	return round(self.angle,5)
